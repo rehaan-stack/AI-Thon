@@ -58,6 +58,11 @@ function makeResult(
   };
 }
 
+/** Whether an operation should include a row. An empty selection means all rows. */
+function isTargetRow(row: DataRow, config: CleaningConfig): boolean {
+  return !config.targetRows || config.targetRows.length === 0 || config.targetRows.includes(row.__rowId);
+}
+
 // ────────────────────────── Deduplication ──────────────────────────
 
 function deduplicateRows(dataset: Dataset, config: CleaningConfig): OperationResult {
@@ -67,6 +72,7 @@ function deduplicateRows(dataset: Dataset, config: CleaningConfig): OperationRes
   const toRemove = new Set<number>();
 
   for (let i = 0; i < ds.rows.length; i++) {
+    if (!isTargetRow(ds.rows[i], config)) continue;
     const hash = ds.columns.map(c => String(ds.rows[i][c.id] ?? '')).join('|');
     if (seen.has(hash)) {
       if (keepOccurrence === 'first') {
@@ -102,6 +108,7 @@ function deduplicateByKeys(dataset: Dataset, config: CleaningConfig): OperationR
   const toRemove = new Set<number>();
 
   for (let i = 0; i < ds.rows.length; i++) {
+    if (!isTargetRow(ds.rows[i], config)) continue;
     const hash = keyColumns.map(cid => String(ds.rows[i][cid] ?? '').trim()).join('|');
     if (seen.has(hash)) {
       if (keepOccurrence === 'first') {
@@ -143,6 +150,7 @@ function fillMissing(dataset: Dataset, config: CleaningConfig): OperationResult 
     if (strategy === 'mean' || strategy === 'median') {
       const numericValues: number[] = [];
       for (const row of ds.rows) {
+        if (!isTargetRow(row, config)) continue;
         const v = row[colId];
         if (!isMissing(v)) {
           const parsed = typeof v === 'number' ? v : parseNumericString(String(v));
@@ -157,7 +165,10 @@ function fillMissing(dataset: Dataset, config: CleaningConfig): OperationResult 
         ? Math.round(calcMean(numericValues) * 100) / 100
         : calcMedian([...numericValues].sort((a, b) => a - b));
     } else if (strategy === 'mode') {
-      const nonMissing = ds.rows.map(r => r[colId]).filter(v => !isMissing(v));
+      const nonMissing = ds.rows
+        .filter((row) => isTargetRow(row, config))
+        .map(r => r[colId])
+        .filter(v => !isMissing(v));
       fillValue = calcMode(nonMissing.map(v => String(v).trim()));
       if (fillValue === undefined) {
         warnings.push(`Column "${col.name}": no values for mode calculation.`);
@@ -171,6 +182,7 @@ function fillMissing(dataset: Dataset, config: CleaningConfig): OperationResult 
       // Handle forward fill row by row below
       let lastValue: CellValue = null;
       for (const row of ds.rows) {
+        if (!isTargetRow(row, config)) continue;
         if (isMissing(row[colId])) {
           if (lastValue !== null) {
             changes.push({ rowId: row.__rowId, columnId: colId, oldValue: row[colId], newValue: lastValue });
@@ -186,6 +198,7 @@ function fillMissing(dataset: Dataset, config: CleaningConfig): OperationResult 
     if (fillValue === null) continue;
 
     for (const row of ds.rows) {
+      if (!isTargetRow(row, config)) continue;
       if (isMissing(row[colId])) {
         changes.push({ rowId: row.__rowId, columnId: colId, oldValue: row[colId], newValue: fillValue });
         row[colId] = fillValue;
@@ -201,7 +214,9 @@ function dropMissingRows(dataset: Dataset, config: CleaningConfig): OperationRes
   const targetCols = config.targetColumns || ds.columns.map(c => c.id);
   const originalCount = ds.rows.length;
 
-  ds.rows = ds.rows.filter(row => !targetCols.some(colId => isMissing(row[colId])));
+  ds.rows = ds.rows.filter(row =>
+    !isTargetRow(row, config) || !targetCols.some(colId => isMissing(row[colId]))
+  );
   const removed = originalCount - ds.rows.length;
   ds.meta = { ...ds.meta, rowCount: ds.rows.length };
 
@@ -214,7 +229,7 @@ function dropEmptyRows(dataset: Dataset, config: CleaningConfig): OperationResul
   const originalCount = ds.rows.length;
 
   ds.rows = ds.rows.filter(row =>
-    !ds.columns.every(col => isMissing(row[col.id]))
+    !isTargetRow(row, config) || !ds.columns.every(col => isMissing(row[col.id]))
   );
   const removed = originalCount - ds.rows.length;
   ds.meta = { ...ds.meta, rowCount: ds.rows.length };
@@ -266,6 +281,7 @@ function trimWhitespace(dataset: Dataset, config: CleaningConfig): OperationResu
   const changes: CellChange[] = [];
 
   for (const row of ds.rows) {
+    if (!isTargetRow(row, config)) continue;
     for (const colId of targetCols) {
       const v = row[colId];
       if (typeof v === 'string') {
@@ -288,6 +304,7 @@ function collapseWhitespace(dataset: Dataset, config: CleaningConfig): Operation
   const changes: CellChange[] = [];
 
   for (const row of ds.rows) {
+    if (!isTargetRow(row, config)) continue;
     for (const colId of targetCols) {
       const v = row[colId];
       if (typeof v === 'string') {
@@ -310,6 +327,7 @@ function normalizeEmails(dataset: Dataset, config: CleaningConfig): OperationRes
   const changes: CellChange[] = [];
 
   for (const row of ds.rows) {
+    if (!isTargetRow(row, config)) continue;
     for (const colId of targetCols) {
       const v = row[colId];
       if (typeof v === 'string' && v.includes('@')) {
@@ -332,6 +350,7 @@ function titleCaseText(dataset: Dataset, config: CleaningConfig): OperationResul
   const changes: CellChange[] = [];
 
   for (const row of ds.rows) {
+    if (!isTargetRow(row, config)) continue;
     for (const colId of targetCols) {
       const v = row[colId];
       if (typeof v === 'string' && !isMissing(v)) {
@@ -353,6 +372,7 @@ function uppercaseText(dataset: Dataset, config: CleaningConfig): OperationResul
   const changes: CellChange[] = [];
 
   for (const row of ds.rows) {
+    if (!isTargetRow(row, config)) continue;
     for (const colId of targetCols) {
       const v = row[colId];
       if (typeof v === 'string' && !isMissing(v)) {
@@ -374,6 +394,7 @@ function lowercaseText(dataset: Dataset, config: CleaningConfig): OperationResul
   const changes: CellChange[] = [];
 
   for (const row of ds.rows) {
+    if (!isTargetRow(row, config)) continue;
     for (const colId of targetCols) {
       const v = row[colId];
       if (typeof v === 'string' && !isMissing(v)) {
@@ -401,6 +422,7 @@ function coerceNumeric(dataset: Dataset, config: CleaningConfig): OperationResul
   for (const colId of targetCols) {
     let failures = 0;
     for (const row of ds.rows) {
+      if (!isTargetRow(row, config)) continue;
       const v = row[colId];
       if (isMissing(v)) continue;
       if (typeof v === 'number') continue;
@@ -430,6 +452,7 @@ function removeCurrencySymbols(dataset: Dataset, config: CleaningConfig): Operat
 
   for (const colId of targetCols) {
     for (const row of ds.rows) {
+      if (!isTargetRow(row, config)) continue;
       const v = row[colId];
       if (typeof v === 'string') {
         let cleaned = v;
@@ -460,6 +483,7 @@ function normalizeDates(dataset: Dataset, config: CleaningConfig): OperationResu
   for (const colId of targetCols) {
     let failures = 0;
     for (const row of ds.rows) {
+      if (!isTargetRow(row, config)) continue;
       const v = row[colId];
       if (isMissing(v)) continue;
       const str = String(v).trim();
@@ -554,6 +578,7 @@ function normalizeBoolean(dataset: Dataset, config: CleaningConfig): OperationRe
 
   for (const colId of targetCols) {
     for (const row of ds.rows) {
+      if (!isTargetRow(row, config)) continue;
       const v = row[colId];
       if (isMissing(v)) continue;
       const str = String(v).trim().toLowerCase();
@@ -578,6 +603,7 @@ function normalizePercentages(dataset: Dataset, config: CleaningConfig): Operati
 
   for (const colId of targetCols) {
     for (const row of ds.rows) {
+      if (!isTargetRow(row, config)) continue;
       const v = row[colId];
       if (isMissing(v)) continue;
       const str = String(v).trim();
@@ -605,6 +631,7 @@ function harmonizeCategories(dataset: Dataset, config: CleaningConfig): Operatio
 
   for (const colId of targetCols) {
     for (const row of ds.rows) {
+      if (!isTargetRow(row, config)) continue;
       const v = row[colId];
       if (isMissing(v)) continue;
       const str = String(v).trim();
@@ -716,7 +743,9 @@ function detectOutliers(dataset: Dataset, config: CleaningConfig): OperationResu
 
     const numericValues: { index: number; value: number }[] = [];
     for (let i = 0; i < ds.rows.length; i++) {
-      const v = ds.rows[i][colId];
+      const row = ds.rows[i];
+      if (!isTargetRow(row, config)) continue;
+      const v = row[colId];
       if (!isMissing(v)) {
         const num = typeof v === 'number' ? v : parseNumericString(String(v));
         if (num !== null && isFinite(num)) {

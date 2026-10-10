@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store';
 import { Sidebar, TopBar } from '@/components/layout';
 import { LandingView } from '@/components/landing/LandingView';
+import { HomeView } from '@/components/landing/HomeView';
 import { FileUploader } from '@/components/upload/FileUploader';
 import { QualityDashboard } from '@/components/diagnostics/QualityDashboard';
 import { CleaningStudio } from '@/components/cleaning/CleaningStudio';
 import { DiffComparison } from '@/components/diff/DiffComparison';
 import { AuditTrail } from '@/components/history/AuditTrail';
 import { ExportView } from '@/components/export/ExportView';
+import { SupportView } from '@/components/support/SupportView';
 import { AiAssistantPanel } from '@/components/assistant/AiAssistantPanel';
 import { Sparkles, X, Loader2, Bot } from 'lucide-react';
 
@@ -28,11 +30,18 @@ export function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
 
   // Synchronize dark mode class to html element
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
+
+  // Each view is a distinct workspace. Start it at the top instead of keeping
+  // the scroll offset from the previous view.
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+  }, [currentView]);
 
   // Keyboard shortcuts (Ctrl+Z for undo, Ctrl+Y or Ctrl+Shift+Z for redo)
   useEffect(() => {
@@ -59,6 +68,8 @@ export function App() {
     switch (currentView) {
       case 'landing':
         return <LandingView />;
+      case 'home':
+        return <HomeView />;
       case 'upload':
         return <FileUploader />;
       case 'overview':
@@ -71,13 +82,15 @@ export function App() {
         return <AuditTrail />;
       case 'settings':
         return <ExportView />;
+      case 'support':
+        return <SupportView />;
       default:
         return <LandingView />;
     }
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
+    <div className="app-shell flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
       {/* Sidebar Navigation */}
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -90,7 +103,11 @@ export function App() {
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <TopBar onMenuClick={() => setMobileMenuOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto relative p-4 sm:p-6 lg:p-8">
+        <main
+          ref={mainRef}
+          className="app-main flex-1 overflow-y-auto relative p-4 sm:p-6 lg:p-8"
+          style={workingDataset ? { paddingBottom: '6rem' } : undefined}
+        >
           {renderCurrentView()}
         </main>
       </div>
@@ -118,6 +135,7 @@ export function App() {
               </div>
               <button
                 onClick={() => setCopilotOpen(false)}
+                aria-label="Close AI Copilot"
                 className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500"
               >
                 <X size={18} />

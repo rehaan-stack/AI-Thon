@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAppStore } from '@/store';
 import { APP_CONFIG } from '@/config/app-config';
 import {
+  House,
   LayoutDashboard,
   Upload,
   Wrench,
@@ -15,6 +16,7 @@ import {
   X,
   Sun,
   Moon,
+  LifeBuoy,
 } from 'lucide-react';
 import type { AppView } from '@/types';
 
@@ -23,6 +25,7 @@ const NAV_ITEMS: {
   label: string;
   icon: React.ReactNode;
 }[] = [
+  { view: 'home', label: 'Home', icon: <House size={20} /> },
   { view: 'overview', label: 'Overview', icon: <LayoutDashboard size={20} /> },
   { view: 'upload', label: 'Upload', icon: <Upload size={20} /> },
   { view: 'workspace', label: 'Workspace', icon: <Wrench size={20} /> },
@@ -56,7 +59,9 @@ export function Sidebar({
   const [isHovered, setIsHovered] = useState(false);
 
   // Expanded = user pinned it open OR is currently hovering over it
-  const expanded = !collapsed || isHovered;
+  // A mobile drawer must always show labels, even when the desktop sidebar
+  // is pinned in its compact state.
+  const expanded = !collapsed || isHovered || mobileOpen;
   const sidebarW = expanded ? SIDEBAR_EXPANDED_W : SIDEBAR_COLLAPSED_W;
 
   const getBadge = (view: AppView): string | undefined => {
@@ -76,7 +81,7 @@ export function Sidebar({
         />
       )}
 
-      {/* ── Desktop spacer (pins main layout so it does not shift on hover) ── */}
+      {/* ── Desktop spacer pins the main layout while the sidebar previews on hover ── */}
       <div
         className="hidden lg:block shrink-0"
         style={{
@@ -94,7 +99,7 @@ export function Sidebar({
           transition: SIDEBAR_TRANSITION,
           boxShadow: expanded && collapsed ? '0 12px 32px -4px rgba(15, 23, 42, 0.16)' : undefined,
         }}
-        className={`
+        className={`sidebar-shell
           fixed top-0 left-0 h-full z-50
           bg-white border-r border-slate-200
           flex flex-col overflow-hidden
@@ -142,6 +147,7 @@ export function Sidebar({
           {/* Mobile close */}
           <button
             onClick={onMobileClose}
+            aria-label="Close navigation menu"
             className="lg:hidden ml-auto mr-1 p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100"
           >
             <X size={18} />
@@ -227,42 +233,32 @@ export function Sidebar({
           })}
         </nav>
 
-        {/* ─── Footer / Collapse toggle ─── */}
-        <div className="hidden lg:block border-t border-slate-100 p-3 shrink-0">
+        {/* ─── Footer / Support / Collapse toggle ─── */}
+        <div className="border-t border-slate-100 p-3 shrink-0">
+          <button
+            onClick={() => { setCurrentView('support'); onMobileClose(); }}
+            title={!expanded ? 'Support' : undefined}
+            className={`w-full flex items-center rounded-xl text-sm transition-colors duration-150 ${currentView === 'support' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'}`}
+            style={{ height: 42, padding: 0, gap: expanded ? 12 : 0 }}
+          >
+            <span className={`shrink-0 ${currentView === 'support' ? 'text-emerald-600' : 'text-slate-400'}`} style={{ width: 40, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <LifeBuoy size={20} />
+            </span>
+            <span style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? 120 : 0, overflow: 'hidden', whiteSpace: 'nowrap', textAlign: 'left', transition: `opacity ${expanded ? '220ms ease 40ms' : '140ms ease'}, max-width 260ms cubic-bezier(0.2, 0, 0, 1)` }}>
+              Support
+            </span>
+          </button>
+
           <button
             onClick={onToggle}
-            className="w-full flex items-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-            style={{
-              height: 38,
-              padding: 0,
-              gap: expanded ? 12 : 0,
-            }}
+            className="hidden lg:flex w-full items-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            style={{ height: 38, padding: 0, gap: expanded ? 12 : 0 }}
             title={collapsed ? 'Pin sidebar open' : 'Collapse sidebar'}
           >
-            <span
-              className="shrink-0"
-              style={{
-                width: 40,
-                height: 38,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
+            <span className="shrink-0" style={{ width: 40, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             </span>
-            <span
-              className="text-xs font-semibold text-slate-500"
-              style={{
-                opacity: expanded ? 1 : 0,
-                maxWidth: expanded ? 120 : 0,
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                textAlign: 'left',
-                transition: `opacity ${expanded ? '220ms ease 40ms' : '140ms ease'}, max-width 260ms cubic-bezier(0.2, 0, 0, 1)`,
-              }}
-            >
+            <span className="text-xs font-semibold text-slate-500" style={{ opacity: expanded ? 1 : 0, maxWidth: expanded ? 120 : 0, overflow: 'hidden', whiteSpace: 'nowrap', textAlign: 'left', transition: `opacity ${expanded ? '220ms ease 40ms' : '140ms ease'}, max-width 260ms cubic-bezier(0.2, 0, 0, 1)` }}>
               {collapsed ? 'Pin Open' : 'Collapse'}
             </span>
           </button>
@@ -277,19 +273,14 @@ export function LogoIcon({ size = 24 }: { size?: number }) {
     <svg
       width={size}
       height={size}
-      viewBox="0 0 32 32"
+      viewBox="0 0 64 64"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <rect x="2" y="2" width="28" height="28" rx="6" fill="#059669" />
-      <rect x="6" y="8" width="8" height="3" rx="1" fill="white" opacity="0.9" />
-      <rect x="16" y="8" width="10" height="3" rx="1" fill="white" opacity="0.6" />
-      <rect x="6" y="14" width="8" height="3" rx="1" fill="white" opacity="0.6" />
-      <rect x="16" y="14" width="10" height="3" rx="1" fill="white" opacity="0.9" />
-      <rect x="6" y="20" width="8" height="3" rx="1" fill="white" opacity="0.9" />
-      <rect x="16" y="20" width="10" height="3" rx="1" fill="white" opacity="0.6" />
-      <circle cx="26" cy="26" r="5" fill="#10B981" />
-      <path d="M23.5 26L25.5 28L28.5 24.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M32 6L58 19L32 32L6 19Z" fill="#0F5A3A" />
+      <path d="M8 31L32 43L56 31" stroke="#187A4F" strokeWidth="5" strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M8 43L32 55L56 43" stroke="#8FD6B2" strokeWidth="5" strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M32 12L33.8 17.2L39 19L33.8 20.8L32 26L30.2 20.8L25 19L30.2 17.2Z" fill="#FFFFFF" />
     </svg>
   );
 }
@@ -307,37 +298,40 @@ export function TopBar({
 
   const viewTitles: Record<AppView, string> = {
     landing: APP_CONFIG.name,
+    home: 'Home',
     overview: 'Data Health Overview',
     upload: 'Upload & Import',
     workspace: 'Cleaning Workspace',
     comparison: 'Before & After',
     audit: 'Audit Trail',
     settings: 'Settings & Export',
+    support: 'Support',
   };
 
   return (
-    <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+    <header className="top-bar h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuClick}
+          aria-label="Open navigation menu"
           className="lg:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-600"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
             <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
           </svg>
         </button>
-        <h1 className="text-lg font-semibold text-slate-900">
+        <h1 className="top-bar-title text-lg font-semibold text-slate-900">
           {viewTitles[currentView]}
         </h1>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="top-bar-actions flex items-center gap-3">
         {workingDataset && (
           <span className="text-sm text-slate-500 hidden sm:inline">
             {workingDataset.meta.fileName}
           </span>
         )}
         {qualityScore && (
-          <div className={`
+          <div className={`top-bar-score
             px-3 py-1 rounded-full text-sm font-semibold
             ${qualityScore.overall >= 80 ? 'bg-emerald-50 text-emerald-700' :
               qualityScore.overall >= 60 ? 'bg-amber-50 text-amber-700' :

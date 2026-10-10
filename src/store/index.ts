@@ -18,6 +18,11 @@ import { profileDataset, calculateQualityScore } from '@/lib/diagnostics';
 import { executeOperation, OPERATION_NAMES } from '@/lib/cleaning';
 import { generateLocalAnalysis } from '@/lib/assistant';
 import { deepClone, generateId, now } from '@/lib/utils';
+import {
+  loadWorkspace,
+  saveWorkspace,
+  type WorkspaceSnapshot,
+} from '@/lib/workspace-persistence';
 
 export interface AppState {
   // ─── Theme / Night Mode ───
@@ -34,6 +39,7 @@ export interface AppState {
   workingDataset: Dataset | null;
   setDataset: (dataset: Dataset) => void;
   clearDataset: () => void;
+  hydrateWorkspace: (snapshot: WorkspaceSnapshot) => void;
 
   // ─── Diagnostics ───
   profile: DataProfile | null;
@@ -68,12 +74,44 @@ const getInitialTheme = (): 'light' | 'dark' => {
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('tabulytix_theme');
     if (saved === 'dark' || saved === 'light') return saved;
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
   }
+  // Keep the product presentation bright by default. Users can still opt into
+  // Night Mode with the theme toggle, and that explicit choice is persisted.
   return 'light';
 };
+
+let activePersistenceUserId: string | null = null;
+let persistenceTimer: ReturnType<typeof setTimeout> | null = null;
+let persistenceRequest = 0;
+
+function snapshotFromState(state: AppState): WorkspaceSnapshot {
+  return {
+    schemaVersion: 1,
+    theme: state.theme,
+    currentView: state.currentView,
+    originalDataset: state.originalDataset,
+    workingDataset: state.workingDataset,
+    profile: state.profile,
+    qualityScore: state.qualityScore,
+    initialQualityScore: state.initialQualityScore,
+    aiAnalysis: state.aiAnalysis,
+    history: state.history,
+    undoStack: state.undoStack,
+  };
+}
+
+function scheduleWorkspaceSave(): void {
+  if (!activePersistenceUserId) return;
+  if (persistenceTimer) clearTimeout(persistenceTimer);
+  persistenceTimer = setTimeout(() => {
+    persistenceTimer = null;
+    const userId = activePersistenceUserId;
+    if (!userId) return;
+    void saveWorkspace(userId, snapshotFromState(useAppStore.getState())).catch((error) => {
+      console.warn('[Tabulytix] Firestore workspace save failed.', error);
+    });
+  }, 250);
+}
 
 export const useAppStore = create<AppState>((set, get) => ({
   // ─── Theme / Night Mode ───
@@ -86,6 +124,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       document.documentElement.classList.toggle('dark', next === 'dark');
     }
     set({ theme: next });
+    scheduleWorkspaceSave();
   },
   setTheme: (theme) => {
     if (typeof window !== 'undefined') {
@@ -93,11 +132,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       document.documentElement.classList.toggle('dark', theme === 'dark');
     }
     set({ theme });
+    scheduleWorkspaceSave();
   },
 
   // ─── Navigation ───
-  currentView: 'landing',
-  setCurrentView: (view) => set({ currentView: view }),
+  currentView: 'home',
+  setCurrentView: (view) => {
+    set({ currentView: view });
+    scheduleWorkspaceSave();
+  },
 
   // ─── Dataset ───
   originalDataset: null,
@@ -123,21 +166,50 @@ export const useAppStore = create<AppState>((set, get) => ({
       canRedo: false,
       currentView: 'overview',
     });
+    scheduleWorkspaceSave();
   },
 
-  clearDataset: () => set({
-    originalDataset: null,
-    workingDataset: null,
-    profile: null,
-    qualityScore: null,
-    initialQualityScore: null,
-    aiAnalysis: null,
-    history: [],
-    undoStack: -1,
-    canUndo: false,
-    canRedo: false,
-    currentView: 'landing',
-  }),
+  clearDataset: () => {
+    set({
+      originalDataset: null,
+      workingDataset: null,
+      profile: null,
+      qualityScore: null,
+      initialQualityScore: null,
+      aiAnalysis: null,
+      history: [],
+      undoStack: -1,
+      canUndo: false,
+      canRedo: false,
+      currentView: 'landing',
+    });
+    scheduleWorkspaceSave();
+  },
+
+  hydrateWorkspace: (snapshot) => {
+    const canUndo = snapshot.undoStack >= 0;
+    const canRedo = snapshot.undoStack + 1 < snapshot.history.length;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tabulytix_theme', snapshot.theme);
+      document.documentElement.classList.toggle('dark', snapshot.theme === 'dark');
+    }
+    set({
+      theme: snapshot.theme,
+      currentView: snapshot.currentView,
+      originalDataset: snapshot.originalDataset,
+      workingDataset: snapshot.workingDataset,
+      profile: snapshot.profile,
+      qualityScore: snapshot.qualityScore,
+      initialQualityScore: snapshot.initialQualityScore,
+      aiAnalysis: snapshot.aiAnalysis,
+      history: snapshot.history,
+      undoStack: snapshot.undoStack,
+      canUndo,
+      canRedo,
+      isLoading: false,
+      loadingMessage: '',
+    });
+  },
 
   // ─── Diagnostics ───
   profile: null,
@@ -150,6 +222,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const profile = profileDataset(workingDataset);
     const qualityScore = calculateQualityScore(workingDataset, profile);
     set({ profile, qualityScore });
+    scheduleWorkspaceSave();
   },
 
   // ─── AI ───
@@ -159,6 +232,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!workingDataset || !profile || !qualityScore) return;
     const aiAnalysis = generateLocalAnalysis(workingDataset, profile, qualityScore);
     set({ aiAnalysis });
+    scheduleWorkspaceSave();
   },
 
   // ─── History ───
@@ -231,6 +305,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       qualityScore,
       aiAnalysis,
     });
+    scheduleWorkspaceSave();
 
     return result;
   },
@@ -261,6 +336,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       qualityScore,
       aiAnalysis,
     });
+    scheduleWorkspaceSave();
   },
 
   redo: () => {
@@ -292,6 +368,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       qualityScore,
       aiAnalysis,
     });
+    scheduleWorkspaceSave();
   },
 
   // ─── Loading ───
@@ -299,3 +376,40 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadingMessage: '',
   setLoading: (loading, message) => set({ isLoading: loading, loadingMessage: message || '' }),
 }));
+
+export async function attachWorkspacePersistence(userId: string): Promise<boolean> {
+  const request = ++persistenceRequest;
+  activePersistenceUserId = null;
+  if (persistenceTimer) {
+    clearTimeout(persistenceTimer);
+    persistenceTimer = null;
+  }
+  useAppStore.getState().clearDataset();
+
+  let snapshot: WorkspaceSnapshot | null = null;
+  try {
+    snapshot = await loadWorkspace(userId);
+  } catch (error) {
+    console.warn('[Tabulytix] Firestore workspace load failed; starting with an empty workspace.', error);
+  }
+
+  if (request !== persistenceRequest) return false;
+  activePersistenceUserId = userId;
+  if (snapshot) {
+    useAppStore.getState().hydrateWorkspace(snapshot);
+    return true;
+  } else {
+    scheduleWorkspaceSave();
+    return false;
+  }
+}
+
+export function detachWorkspacePersistence(): void {
+  persistenceRequest += 1;
+  activePersistenceUserId = null;
+  if (persistenceTimer) {
+    clearTimeout(persistenceTimer);
+    persistenceTimer = null;
+  }
+  useAppStore.getState().clearDataset();
+}

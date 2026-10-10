@@ -20,7 +20,6 @@ import { EmptyState } from '@/components/common/EmptyState';
 
 export function AuditTrail() {
   const history = useAppStore((s) => s.history);
-  const undoStack = useAppStore((s) => s.undoStack);
   const undo = useAppStore((s) => s.undo);
   const redo = useAppStore((s) => s.redo);
   const canUndo = useAppStore((s) => s.canUndo);
@@ -29,6 +28,9 @@ export function AuditTrail() {
   const originalDataset = useAppStore((s) => s.originalDataset);
   const qualityScore = useAppStore((s) => s.qualityScore);
   const initialQualityScore = useAppStore((s) => s.initialQualityScore);
+  const appliedHistory = history.filter(
+    (entry) => entry.status === 'applied' || entry.status === 'reapplied'
+  );
 
   if (!workingDataset) {
     return (
@@ -68,7 +70,7 @@ export function AuditTrail() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 animate-fadeIn">
+    <div className="audit-trail max-w-4xl mx-auto px-4 py-6 space-y-6 animate-fadeIn">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="space-y-1">
@@ -83,7 +85,7 @@ export function AuditTrail() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="audit-actions flex items-center gap-2">
           <button
             onClick={undo}
             disabled={!canUndo}
@@ -113,32 +115,29 @@ export function AuditTrail() {
         </div>
       </div>
 
-      {/* History Timeline */}
-      {history.length === 0 ? (
+      {/* History Timeline: only transformations still applied to the working dataset */}
+      {appliedHistory.length === 0 ? (
         <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-3 shadow-sm">
           <Clock size={36} className="mx-auto text-slate-300" />
           <h3 className="text-base font-semibold text-slate-800">
-            No transformations applied yet
+            No transformations applied
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Operations applied in the Cleaning Studio or through the AI Assistant will appear here with full time-travel rollback capability.
+            Operations applied in the Cleaning Studio or through the AI Assistant will appear here. Undone steps are hidden while remaining available through Undo/Redo.
           </p>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="relative pl-6 border-l-2 border-emerald-200 space-y-6">
-            {history.map((entry, idx) => {
-              const isCurrent = idx === undoStack;
-              const isUndone = idx > undoStack;
+            {appliedHistory.map((entry, idx) => {
+              const isCurrent = idx === appliedHistory.length - 1;
 
               return (
                 <div key={entry.id} className="relative group">
                   {/* Timeline Node Dot */}
                   <div
                     className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 transition-all ${
-                      isUndone
-                        ? 'border-slate-300 bg-white'
-                        : isCurrent
+                      isCurrent
                         ? 'border-emerald-600 bg-emerald-600 ring-4 ring-emerald-100'
                         : 'border-emerald-500 bg-white'
                     }`}
@@ -146,33 +145,25 @@ export function AuditTrail() {
 
                   <div
                     className={`p-4 rounded-2xl border transition-all ${
-                      isUndone
-                        ? 'bg-slate-50 border-slate-200 opacity-60'
-                        : isCurrent
+                      isCurrent
                         ? 'bg-white border-emerald-300 shadow-sm'
                         : 'bg-white border-slate-200'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div className="audit-entry-header flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex flex-wrap items-center gap-2">
                         <span className="text-xs font-mono font-bold text-slate-400">
                           #{idx + 1}
                         </span>
                         <h4 className="text-sm font-bold text-slate-900">
                           {entry.operationName}
                         </h4>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                            isUndone
-                              ? 'bg-slate-200 text-slate-600'
-                              : 'bg-emerald-100 text-emerald-800'
-                          }`}
-                        >
-                          {isUndone ? 'Undone' : 'Applied'}
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-100 text-emerald-800">
+                          Applied
                         </span>
                       </div>
 
-                      <span className="text-[11px] text-slate-400 font-mono">
+                      <span className="shrink-0 text-[11px] text-slate-400 font-mono">
                         {new Date(entry.timestamp).toLocaleTimeString()}
                       </span>
                     </div>
@@ -197,6 +188,9 @@ export function AuditTrail() {
                     <div className="mt-2.5 pt-2 border-t border-slate-100 text-[11px] text-slate-500 font-mono">
                       {entry.config.targetColumns && (
                         <span>Target: {entry.config.targetColumns.join(', ')} | </span>
+                      )}
+                      {entry.config.targetRows && (
+                        <span>{entry.config.targetRows.length} selected row{entry.config.targetRows.length === 1 ? '' : 's'} | </span>
                       )}
                       {entry.config.fillStrategy && (
                         <span>Strategy: {entry.config.fillStrategy} | </span>

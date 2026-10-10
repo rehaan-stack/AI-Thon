@@ -180,6 +180,8 @@ export type MissingFillStrategy =
 export interface CleaningConfig {
   actionId: CleaningActionId;
   targetColumns?: string[];
+  /** Stable row ids to scope row-aware transformations. Omit to process all rows. */
+  targetRows?: string[];
   /** For deduplication */
   keyColumns?: string[];
   keepOccurrence?: 'first' | 'last';
@@ -308,9 +310,11 @@ export interface AuditReportData {
 
 export type AppView =
   | 'landing'
+  | 'home'
   | 'overview'
   | 'upload'
   | 'workspace'
   | 'comparison'
   | 'audit'
-  | 'settings';
+  | 'settings'
+  | 'support';

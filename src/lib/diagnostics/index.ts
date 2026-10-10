@@ -367,7 +367,11 @@ export function calculateQualityScore(dataset: Dataset, profile: DataProfile): Q
   // Dirty headers
   const dirtyHeaders = dataset.columns.filter(c => {
     const name = c.name;
-    return /\s{2,}/.test(name) || /[#$%^&*()!@]/.test(name) || name !== name.trim();
+    const originalName = c.originalName;
+    return originalName !== originalName.trim()
+      || /\s{2,}/.test(originalName)
+      || /[#$%^&*()!@]/.test(originalName)
+      || name !== originalName.trim();
   });
   if (dirtyHeaders.length > 0) {
     structuralPenalty += dirtyHeaders.length / dataset.columns.length * 0.4;
@@ -381,17 +385,26 @@ export function calculateQualityScore(dataset: Dataset, profile: DataProfile): Q
     });
   }
 
-  // Whitespace issues
+  // Whitespace issues. Scale this penalty by the number of affected cells so a
+  // single accidental space does not reduce an entire dataset by 30 points.
   const wsColumns = profile.columns.filter(c => c.leadingWhitespaceCount > 0 || c.trailingWhitespaceCount > 0);
   if (wsColumns.length > 0) {
-    const totalWS = wsColumns.reduce((s, c) => s + c.leadingWhitespaceCount + c.trailingWhitespaceCount, 0);
-    structuralPenalty += 0.3;
-    structuralPenalties.push(`${totalWS} cells with leading/trailing whitespace across ${wsColumns.length} columns`);
+    const totalCells = Math.max(1, profile.totalRows * profile.totalColumns);
+    const whitespaceCells = dataset.columns.reduce((total, column) => {
+      return total + dataset.rows.filter((row) => {
+        const value = row[column.id];
+        if (typeof value !== 'string') return false;
+        const trimmed = value.trim();
+        return value !== trimmed || /\s{2,}/.test(trimmed);
+      }).length;
+    }, 0);
+    structuralPenalty += Math.min(0.3, (whitespaceCells / totalCells) * 0.3);
+    structuralPenalties.push(`${whitespaceCells} cells with leading/trailing or repeated whitespace across ${wsColumns.length} columns`);
     issues.push({
       id: generateId(),
-      issue: `Whitespace issues in ${wsColumns.length} columns (${totalWS} cells)`,
+      issue: `Whitespace issues in ${wsColumns.length} columns (${whitespaceCells} cells)`,
       severity: 'low',
-      affectedCount: totalWS,
+      affectedCount: whitespaceCells,
     });
   }
 

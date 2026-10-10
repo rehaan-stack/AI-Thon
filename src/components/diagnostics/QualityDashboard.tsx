@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '@/store';
 import {
   ShieldAlert,
@@ -15,6 +15,7 @@ import {
   Filter,
   Check,
   Zap,
+  RefreshCw,
 } from 'lucide-react';
 import type { IssueSeverity } from '@/types';
 import { EmptyState } from '@/components/common/EmptyState';
@@ -26,9 +27,27 @@ export function QualityDashboard() {
   const profile = useAppStore((s) => s.profile);
   const setCurrentView = useAppStore((s) => s.setCurrentView);
   const applyOperation = useAppStore((s) => s.applyOperation);
+  const refreshDiagnostics = useAppStore((s) => s.refreshDiagnostics);
+  const refreshAIAnalysis = useAppStore((s) => s.refreshAIAnalysis);
 
   const [severityFilter, setSeverityFilter] = useState<'all' | IssueSeverity>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  }, []);
+
+  const handleRefresh = () => {
+    refreshDiagnostics();
+    refreshAIAnalysis();
+    setIsRefreshing(true);
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => setIsRefreshing(false), 450);
+  };
 
   if (!workingDataset || !qualityScore || !profile) {
     return (
@@ -83,7 +102,28 @@ export function QualityDashboard() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8 animate-fadeIn">
+    <div className="quality-dashboard max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-8 animate-fadeIn">
+      {/* Current dataset actions */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Current dataset</p>
+          <p className="truncate text-sm font-bold text-slate-900" title={workingDataset.meta.fileName}>
+            {workingDataset.meta.fileName}
+          </p>
+          <p className="text-[11px] text-slate-500">Health and recommendations are based on the cleaned working copy.</p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-70"
+          >
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            {isRefreshing ? 'Refreshing…' : 'Refresh health'}
+          </button>
+        </div>
+      </div>
+
       {/* Top Banner / Metrics Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Quality Score Gauge */}
@@ -135,7 +175,7 @@ export function QualityDashboard() {
 
         {/* 4 Pillars Dimensions */}
         <div className="lg:col-span-3 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="quality-dimensions-header flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
               Data Quality Dimensions
             </h3>
@@ -227,7 +267,7 @@ export function QualityDashboard() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="quality-issues-toolbar flex items-center gap-3">
             <div className="flex bg-slate-100 p-1 rounded-xl text-xs">
               {(['all', 'high', 'medium', 'low'] as const).map((sev) => (
                 <button
@@ -264,7 +304,7 @@ export function QualityDashboard() {
             {filteredIssues.map((issue) => (
               <div
                 key={issue.id}
-                className="p-4 hover:bg-slate-50/70 transition-colors flex items-start justify-between gap-4"
+                className="quality-issue-row p-4 hover:bg-slate-50/70 transition-colors flex items-start justify-between gap-4"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2.5">
@@ -315,7 +355,7 @@ export function QualityDashboard() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="responsive-table w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="py-3 px-4">Column Name</th>

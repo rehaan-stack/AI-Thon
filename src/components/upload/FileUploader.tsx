@@ -137,7 +137,7 @@ export function FileUploader() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8 animate-fadeIn">
+    <div className="upload-view max-w-5xl mx-auto px-4 py-8 space-y-8 animate-fadeIn">
       {/* Header */}
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
@@ -154,8 +154,8 @@ export function FileUploader() {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`
-          relative cursor-pointer border-2 border-dashed rounded-3xl p-10 sm:p-14 text-center transition-all duration-200
+        className={`upload-dropzone max-w-4xl mx-auto w-full
+          relative cursor-pointer border-2 border-dashed rounded-3xl p-8 sm:p-10 text-center transition-all duration-200
           ${isDragging
             ? 'border-emerald-500 bg-emerald-50/50 scale-[1.01]'
             : 'border-slate-300 hover:border-emerald-400 bg-white hover:bg-slate-50/50 shadow-sm'
@@ -227,7 +227,7 @@ export function FileUploader() {
               </button>
             ))}
           </div>
-          <div className="pt-2 flex justify-end">
+          <div className="upload-sheet-action pt-2 flex justify-end">
             <button
               onClick={() => executeParse(selectedFile, selectedSheet)}
               className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold flex items-center gap-2 shadow"
@@ -294,7 +294,7 @@ export function FileUploader() {
                     Messy Global Customer Orders
                   </h4>
                   <span className="text-xs text-slate-500">
-                    25 columns • 40+ rows • Contaminated real-world data
+                    11 columns • 40+ rows • Contaminated real-world data
                   </span>
                 </div>
               </div>

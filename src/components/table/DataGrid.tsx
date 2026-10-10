@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAppStore } from '@/store';
 import {
   ChevronLeft,
@@ -20,7 +20,19 @@ import {
 } from 'lucide-react';
 import type { ColumnMeta, CellValue } from '@/types';
 
-export function DataGrid() {
+interface DataGridProps {
+  selectedColumnIds?: string[];
+  onSelectedColumnIdsChange?: (columnIds: string[]) => void;
+  selectedRowIds?: string[];
+  onSelectedRowIdsChange?: (rowIds: string[]) => void;
+}
+
+export function DataGrid({
+  selectedColumnIds = [],
+  onSelectedColumnIdsChange,
+  selectedRowIds = [],
+  onSelectedRowIdsChange,
+}: DataGridProps) {
   const workingDataset = useAppStore((s) => s.workingDataset);
   const applyOperation = useAppStore((s) => s.applyOperation);
 
@@ -33,6 +45,20 @@ export function DataGrid() {
   const [renameValue, setRenameValue] = useState('');
   const [activeMenuColId, setActiveMenuColId] = useState<string | null>(null);
 
+  const selectedColumnSet = useMemo(() => new Set(selectedColumnIds), [selectedColumnIds]);
+  const columns = workingDataset?.columns ?? [];
+  const rows = workingDataset?.rows ?? [];
+
+  useEffect(() => {
+    const validRowIds = new Set(rows.map((row) => row.__rowId));
+    const validColumnIds = new Set(columns.map((column) => column.id));
+    const validRows = selectedRowIds.filter((rowId) => validRowIds.has(rowId));
+    const validColumns = selectedColumnIds.filter((columnId) => validColumnIds.has(columnId));
+
+    if (validRows.length !== selectedRowIds.length) onSelectedRowIdsChange?.(validRows);
+    if (validColumns.length !== selectedColumnIds.length) onSelectedColumnIdsChange?.(validColumns);
+  }, [rows, columns, selectedRowIds, selectedColumnIds, onSelectedRowIdsChange, onSelectedColumnIdsChange]);
+
   if (!workingDataset) {
     return (
       <div className="p-8 text-center text-slate-500">
@@ -40,8 +66,6 @@ export function DataGrid() {
       </div>
     );
   }
-
-  const { columns, rows } = workingDataset;
 
   // Sorting handler
   const handleSort = (colId: string) => {
@@ -100,6 +124,38 @@ export function DataGrid() {
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
   const pageIndex = Math.min(currentPage, totalPages);
   const paginatedRows = processedRows.slice((pageIndex - 1) * pageSize, pageIndex * pageSize);
+  const visibleRowIds = paginatedRows.map((row) => row.__rowId);
+  const selectedVisibleRowCount = visibleRowIds.filter((rowId) => selectedRowIds.includes(rowId)).length;
+  const allVisibleRowsSelected = visibleRowIds.length > 0 && selectedVisibleRowCount === visibleRowIds.length;
+
+  const toggleColumnSelection = (columnId: string) => {
+    onSelectedColumnIdsChange?.(
+      selectedColumnSet.has(columnId)
+        ? selectedColumnIds.filter((id) => id !== columnId)
+        : [...selectedColumnIds, columnId]
+    );
+  };
+
+  const toggleRowSelection = (rowId: string) => {
+    onSelectedRowIdsChange?.(
+      selectedRowIds.includes(rowId)
+        ? selectedRowIds.filter((id) => id !== rowId)
+        : [...selectedRowIds, rowId]
+    );
+  };
+
+  const toggleVisibleRows = () => {
+    if (allVisibleRowsSelected) {
+      onSelectedRowIdsChange?.(selectedRowIds.filter((rowId) => !visibleRowIds.includes(rowId)));
+    } else {
+      onSelectedRowIdsChange?.([...new Set([...selectedRowIds, ...visibleRowIds])]);
+    }
+  };
+
+  const clearSelection = () => {
+    onSelectedRowIdsChange?.([]);
+    onSelectedColumnIdsChange?.([]);
+  };
 
   // Column Actions
   const handleRenameColumn = (colId: string) => {
@@ -159,10 +215,10 @@ export function DataGrid() {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[700px] overflow-hidden">
+    <div className="data-grid-panel bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[700px] overflow-hidden">
       {/* Table Toolbar */}
-      <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4 shrink-0 bg-slate-50/50">
-        <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-md">
+      <div className="data-grid-toolbar p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4 shrink-0 bg-slate-50/50">
+        <div className="data-grid-search flex items-center gap-3 flex-1 min-w-[240px] max-w-md">
           <div className="relative w-full">
             <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
             <input
@@ -186,7 +242,21 @@ export function DataGrid() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-xs text-slate-600">
+        <div className="data-grid-controls flex items-center gap-4 text-xs text-slate-600">
+          {(selectedRowIds.length > 0 || selectedColumnIds.length > 0) && (
+            <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-emerald-700">
+              <span className="font-semibold">
+                {selectedRowIds.length} row{selectedRowIds.length === 1 ? '' : 's'} · {selectedColumnIds.length} column{selectedColumnIds.length === 1 ? '' : 's'} selected
+              </span>
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="font-semibold text-emerald-800 underline decoration-emerald-300 underline-offset-2 hover:text-emerald-950"
+              >
+                Clear
+              </button>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <span>Rows per page:</span>
             <select
@@ -212,23 +282,47 @@ export function DataGrid() {
       </div>
 
       {/* Main Table Body */}
-      <div className="flex-1 overflow-auto relative">
-        <table className="w-full text-left text-xs border-collapse">
+      <div className="data-grid-scroll flex-1 overflow-auto relative">
+        <table className="responsive-table w-full text-left text-xs border-collapse">
           <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-sm text-slate-700">
             <tr>
-              <th className="py-2.5 px-3 w-14 text-center font-mono text-[11px] text-slate-400 border-r border-slate-200 bg-slate-100">
-                #
+              <th className="py-2.5 px-3 w-16 text-center font-mono text-[11px] text-slate-400 border-r border-slate-200 bg-slate-100">
+                <label className="inline-flex items-center justify-center gap-1.5 cursor-pointer" title="Select all visible rows">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleRowsSelected}
+                    ref={(element) => {
+                      if (element) element.indeterminate = selectedVisibleRowCount > 0 && !allVisibleRowsSelected;
+                    }}
+                    onChange={toggleVisibleRows}
+                    aria-label="Select all visible rows"
+                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>#</span>
+                </label>
               </th>
               {columns.map((col) => {
                 const isSorted = sortColumn === col.id;
                 const isEditing = editingColId === col.id;
+                const isColumnSelected = selectedColumnSet.has(col.id);
 
                 return (
                   <th
                     key={col.id}
-                    className="py-2 px-3 border-r border-slate-200 select-none relative group hover:bg-slate-200/60 transition-colors"
+                    className={`py-2 px-3 border-r border-slate-200 select-none relative group transition-colors ${
+                      isColumnSelected ? 'bg-emerald-50 text-slate-700' : 'bg-slate-100 text-slate-700'
+                    } hover:bg-slate-200/60`}
                   >
                     <div className="flex items-center justify-between gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedColumnSet.has(col.id)}
+                        onChange={() => toggleColumnSelection(col.id)}
+                        onClick={(event) => event.stopPropagation()}
+                        aria-label={`Select column ${col.name}`}
+                        title={`Select ${col.name} column for the next transformation`}
+                        className="shrink-0 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      />
                       {isEditing ? (
                         <div className="flex items-center gap-1">
                           <input
@@ -328,21 +422,33 @@ export function DataGrid() {
                 </td>
               </tr>
             ) : (
-              paginatedRows.map((row, idx) => (
-                <tr key={row.__rowId} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-2 px-3 text-center font-mono text-[10px] text-slate-400 border-r border-slate-100 bg-slate-50/40">
-                    {(pageIndex - 1) * pageSize + idx + 1}
+              paginatedRows.map((row, idx) => {
+                const isRowSelected = selectedRowIds.includes(row.__rowId);
+                return (
+                <tr key={row.__rowId} className={`${isRowSelected ? 'bg-emerald-50/70' : 'hover:bg-slate-50/80'} transition-colors`}>
+                  <td className={`py-2 px-3 text-center font-mono text-[10px] text-slate-400 border-r border-slate-100 ${isRowSelected ? 'bg-emerald-100/60' : 'bg-slate-50/40'}`}>
+                    <label className="inline-flex items-center justify-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isRowSelected}
+                        onChange={() => toggleRowSelection(row.__rowId)}
+                        aria-label={`Select row ${(pageIndex - 1) * pageSize + idx + 1}`}
+                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <span>{(pageIndex - 1) * pageSize + idx + 1}</span>
+                    </label>
                   </td>
                   {columns.map((col) => (
                     <td
                       key={col.id}
-                      className="py-2 px-3 border-r border-slate-100 text-slate-700 max-w-xs truncate font-mono text-[11px]"
+                      className={`py-2 px-3 border-r border-slate-100 text-slate-700 max-w-xs truncate font-mono text-[11px] ${selectedColumnSet.has(col.id) ? 'bg-emerald-50/60' : ''}`}
                     >
                       {renderCellContent(row[col.id])}
                     </td>
                   ))}
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

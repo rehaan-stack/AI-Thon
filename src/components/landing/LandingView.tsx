@@ -1,186 +1,44 @@
 'use client';
 
 import React from 'react';
+import { ArrowRight, ClipboardCheck, FileSpreadsheet, History, ShieldCheck, Sparkles, Upload, Zap } from 'lucide-react';
 import { useAppStore } from '@/store';
-import { APP_CONFIG } from '@/config/app-config';
-import {
-  Sparkles,
-  Upload,
-  ShieldCheck,
-  FileSpreadsheet,
-  Activity,
-  History,
-  FileCheck,
-  Zap,
-  ArrowRight,
-  Database,
-  BarChart3,
-  Layers,
-  Wand2,
-} from 'lucide-react';
 import { parseSampleCSV } from '@/lib/parsing';
 import messySampleCsv from '@/data/Messy_Global_Customer_Orders.csv?raw';
+
+function Logo({ size = 36 }: { size?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M32 6L58 19L32 32L6 19Z" fill="#0F5A3A" />
+    <path d="M8 31L32 43L56 31" fill="none" stroke="#187A4F" strokeWidth="5" strokeLinejoin="round" strokeLinecap="round" />
+    <path d="M8 43L32 55L56 43" fill="none" stroke="#8FD6B2" strokeWidth="5" strokeLinejoin="round" strokeLinecap="round" />
+    <path d="M32 12L33.8 17.2L39 19L33.8 20.8L32 26L30.2 20.8L25 19L30.2 17.2Z" fill="#fff" />
+  </svg>;
+}
+
+const css = `
+.tx-page{--bg:#F7F4F3;--surface:#fff;--ink:#14201A;--muted:#506259;--line:#E6E0DC;--forest:#0F3D2A;--green:#187A4F;--mint:#E3F4EB;--deep:#10261C;background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,sans-serif;line-height:1.55;min-height:100%;}
+.tx-page *{box-sizing:border-box}.tx-wrap{max-width:1160px;margin:auto;padding:0 24px}.tx-nav{position:sticky;top:0;z-index:20;background:rgba(247,244,243,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}.tx-nav-in{height:68px;display:flex;align-items:center;justify-content:space-between;gap:16px}.tx-brand{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--forest);font-size:22px;font-weight:700;cursor:pointer}.tx-links{display:flex;gap:28px;font-size:15px;font-weight:600;color:var(--muted)}.tx-links button{border:0;background:none;color:inherit;cursor:pointer;font:inherit}.tx-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 22px;border-radius:12px;border:1px solid transparent;font:inherit;font-size:15px;font-weight:700;cursor:pointer}.tx-primary{background:var(--green);color:#fff;box-shadow:0 6px 18px rgba(24,122,79,.25)}.tx-primary:hover{background:#13643f}.tx-ghost{background:#fff;border-color:var(--line);color:var(--ink)}.tx-ghost:hover{border-color:#cfc7c2}.tx-hero{text-align:center;padding:72px 0 40px}.tx-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border:1px dashed #9ed2b8;border-radius:999px;background:rgba(255,255,255,.6);font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--green)}.tx-h1{margin:22px auto 0;max-width:860px;font-size:clamp(36px,6vw,64px);line-height:1.08;letter-spacing:-.035em;font-weight:800;color:var(--forest)}.tx-h1 span{color:var(--green)}.tx-lead{margin:22px auto 0;max-width:720px;font-size:18px;color:var(--muted)}.tx-cta{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:34px}.tx-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 28px;margin:28px 0 0;padding:0;list-style:none;font-size:14px;font-weight:600;color:var(--muted)}.tx-badges li{display:flex;align-items:center;gap:8px}.tx-icon{color:var(--green);flex:none}.tx-demo{margin:48px auto 0;max-width:1000px;padding:28px;background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:0 24px 60px rgba(20,32,26,.08);text-align:left}.tx-demo-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center}.tx-cap{margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}.tx-table{display:grid;grid-template-columns:1.3fr 1fr .9fr;border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:14px}.tx-table div{padding:11px 12px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:pre;overflow:hidden;text-overflow:ellipsis}.tx-table div:nth-child(3n){border-right:0}.tx-table div:nth-last-child(-n+3){border-bottom:0}.tx-table .tx-th{background:#F2EEEC;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.tx-table .tx-bad{background:#FCE9E4;color:#8F3524;font-weight:600}.tx-table .tx-good{background:var(--mint);color:#0E4A30;font-weight:600}.tx-arrow{width:48px;height:48px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff}.tx-note{margin:16px 0 0;font-size:13px;color:var(--muted)}.tx-section{padding:84px 0}.tx-eyebrow{margin:0 0 12px;font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--green)}.tx-h2{margin:0;max-width:640px;font-size:clamp(28px,4vw,42px);line-height:1.12;letter-spacing:-.03em;font-weight:800;color:var(--forest)}.tx-muted{margin:16px 0 0;max-width:600px;color:var(--muted);font-size:17px}.tx-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-top:44px}.tx-card,.tx-step{padding:26px;background:var(--surface);border:1px solid var(--line);border-radius:20px}.tx-card .tx-ibox{width:46px;height:46px;margin-bottom:18px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--mint);color:var(--green)}.tx-card h3,.tx-step h3{margin:0 0 8px;color:var(--forest);font-size:18px}.tx-card p,.tx-step p{margin:0;color:var(--muted);font-size:15px}.tx-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:44px}.tx-number{display:flex;align-items:center;justify-content:center;width:38px;height:38px;margin-bottom:18px;border-radius:10px;background:var(--forest);color:#fff;font-weight:800}.tx-privacy{display:grid;grid-template-columns:1.2fr 1fr;gap:40px;align-items:center;padding:56px;background:var(--deep);border-radius:28px;color:#fff}.tx-privacy .tx-eyebrow{color:#6FD3A2}.tx-privacy .tx-h2{color:#fff}.tx-privacy p{color:#B9CFC4;font-size:17px}.tx-list{display:grid;gap:14px;margin:0;padding:0;list-style:none}.tx-list li{display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.06);font-weight:600}.tx-list svg{color:#6FD3A2}.tx-final{text-align:center;padding:96px 0}.tx-footer{padding:32px 0 44px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}.tx-footer-in{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px}.tx-footer .tx-brand{font-size:18px}@media(max-width:960px){.tx-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.tx-privacy{grid-template-columns:1fr;padding:36px}}@media(max-width:760px){.tx-links{display:none}.tx-demo-grid{grid-template-columns:1fr}.tx-arrow{margin:auto;transform:rotate(90deg)}.tx-steps{grid-template-columns:1fr}.tx-hero{padding-top:48px}}@media(max-width:520px){.tx-cards{grid-template-columns:1fr}.tx-demo{padding:18px}.tx-table{font-size:12.5px}}
+`;
 
 export function LandingView() {
   const setCurrentView = useAppStore((s) => s.setCurrentView);
   const setDataset = useAppStore((s) => s.setDataset);
   const setLoading = useAppStore((s) => s.setLoading);
-
-  const loadSampleDataset = async () => {
-    try {
-      setLoading(true, 'Ingesting and analyzing sample dataset...');
-      await new Promise((resolve) => setTimeout(resolve, 150));
-      const res = parseSampleCSV(messySampleCsv, 'Messy_Global_Customer_Orders.csv');
-      if (res.success && res.dataset) {
-        setDataset(res.dataset);
-      }
-    } catch (err) {
-      console.error('Failed to load sample dataset', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="min-h-full pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-16 animate-fadeIn">
-      {/* Hero Section */}
-      <div className="pt-10 sm:pt-14 text-center max-w-3xl mx-auto space-y-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold uppercase tracking-wider shadow-sm">
-          <Sparkles size={14} className="text-emerald-600 animate-pulse" />
-          Autonomous Data Engineering Studio
-        </div>
-
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
-          Turn Messy, Broken Spreadsheets Into{' '}
-          <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
-            Analysis-Ready Data
-          </span>
-        </h1>
-
-        <p className="text-lg sm:text-xl text-slate-600 font-normal leading-relaxed">
-          {APP_CONFIG.description}. Instantly diagnose quality issues, execute rule-based and AI-guided normalization, verify changes with visual diffs, and generate compliant audit reports.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-          <button
-            onClick={() => setCurrentView('upload')}
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-base group"
-          >
-            <Upload size={18} />
-            <span>Upload Your Dataset</span>
-            <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-          </button>
-
-          <button
-            onClick={loadSampleDataset}
-            className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-medium border border-slate-300 shadow-sm hover:shadow transition-all duration-200 flex items-center justify-center gap-2 text-base"
-          >
-            <FileSpreadsheet size={18} className="text-emerald-600" />
-            <span>Try With Sample Messy Data</span>
-          </button>
-        </div>
-
-        <div className="flex items-center justify-center gap-6 pt-4 text-xs font-medium text-slate-500">
-          <span className="flex items-center gap-1.5">
-            <ShieldCheck size={16} className="text-emerald-600" /> 100% In-Browser & Private
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Zap size={16} className="text-amber-500" /> Instant Zero-Lag Engine
-          </span>
-          <span className="flex items-center gap-1.5">
-            <History size={16} className="text-blue-500" /> Reversible Time-Machine
-          </span>
-        </div>
-      </div>
-
-      {/* Feature Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <Activity size={22} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">Comprehensive Quality Scoring</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Multi-dimensional health checks calculating Completeness, Uniqueness, Consistency, and Structural Hygiene with severity-graded issue logs.
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
-            <Wand2 size={22} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">20+ Transformation Engines</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Trim leading/trailing whitespace, resolve email anomalies, harmonize dates to ISO-8601, deduplicate rows, impute missing values, and sanitize column names.
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <Sparkles size={22} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">AI Assistant & Auto-Pipeline</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Automatic issue identification with one-click pipeline generation. Say what you want in plain English and let the engine prescribe precise operations.
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-            <Layers size={22} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">Side-by-Side Visual Diff</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Verify before applying. Compare raw untrusted inputs with transformed datasets down to the exact cell, row, and column difference.
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-            <History size={22} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">Full Undo / Redo Time Machine</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Non-destructive operations with immutable snapshots. Undo or step forward through any operation with guaranteed data integrity.
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow space-y-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-            <FileCheck size={22} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">Audit-Ready PDF & Data Export</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Export cleaned CSV and XLSX datasets alongside a structured PDF Data Audit Trail detailing all quality metrics and transformations applied.
-          </p>
-        </div>
-      </div>
-
-      {/* Pipeline Preview Banner */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-8 sm:p-10 shadow-xl overflow-hidden relative border border-slate-800">
-        <div className="max-w-2xl space-y-4 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs font-semibold uppercase tracking-wider">
-            Enterprise Architecture
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Built for Data Engineers, Analysts & Hackathon Demonstrations
-          </h2>
-          <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-            Handles dirty real-world spreadsheets with inconsistent dates, duplicate keys, broken percentages, negative outlier values, mixed casing, and unescaped delimiters.
-          </p>
-          <div className="pt-2">
-            <button
-              onClick={loadSampleDataset}
-              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm transition-all shadow-md hover:shadow-emerald-500/20"
-            >
-              Launch Live Interactive Demo
-            </button>
-          </div>
-        </div>
-
-        {/* Ambient background graphic */}
-        <div className="absolute right-0 bottom-0 translate-x-12 translate-y-12 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-      </div>
-    </div>
-  );
+  const loadSampleDataset = async () => { try { setLoading(true, 'Ingesting and analyzing sample dataset...'); await new Promise((resolve) => setTimeout(resolve, 150)); const res = parseSampleCSV(messySampleCsv, 'Messy_Global_Customer_Orders.csv'); if (res.success && res.dataset) setDataset(res.dataset); } finally { setLoading(false); } };
+  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  return <div className="tx-page -m-4 sm:-m-6 lg:-m-8"><style>{css}</style>
+    <header className="tx-nav"><div className="tx-wrap tx-nav-in"><button className="tx-brand" onClick={() => scrollTo('top')} aria-label="Tabulytix home"><Logo /><span>Tabulytix</span></button><nav className="tx-links" aria-label="Primary"><button onClick={() => scrollTo('features')}>Features</button><button onClick={() => scrollTo('how')}>How it works</button><button onClick={() => scrollTo('privacy')}>Privacy</button></nav><button className="tx-btn tx-primary" onClick={() => setCurrentView('upload')}>Upload Dataset</button></div></header>
+    <main id="landing-main">
+      <div id="top" className="tx-hero"><div className="tx-wrap"><span className="tx-pill"><Sparkles size={17} />Autonomous Data Engineering Studio</span><h1 className="tx-h1">Turn Messy, Broken Spreadsheets Into <span>Analysis-Ready Data</span></h1><p className="tx-lead">An intelligent data-cleaning and normalization platform. Upload messy datasets, identify quality issues, apply safe transformations, compare results, and export clean data.</p><div className="tx-cta" id="upload"><button className="tx-btn tx-primary" onClick={() => setCurrentView('upload')}><Upload size={18} />Upload Your Dataset<ArrowRight size={17} /></button><button className="tx-btn tx-ghost" onClick={loadSampleDataset}><FileSpreadsheet size={18} className="tx-icon" />Try With Sample Messy Data</button></div><ul className="tx-badges"><li><ShieldCheck size={18} className="tx-icon" />100% In-Browser &amp; Private</li><li><Zap size={18} className="tx-icon" />Instant Zero-Lag Engine</li><li><History size={18} className="tx-icon" />Reversible Time-Machine</li></ul><div className="tx-demo"><div className="tx-demo-grid"><Preview type="before" /><div className="tx-arrow"><ArrowRight size={22} /></div><Preview type="after" /></div><p className="tx-note">Illustrative sample data.</p></div></div></div>
+      <section id="features" className="tx-section"><div className="tx-wrap"><p className="tx-eyebrow">Features</p><h2 className="tx-h2">Everything between a broken file and a clean one</h2><p className="tx-muted">Diagnose, fix, verify and document, all in one studio.</p><div className="tx-cards">{[['Instant diagnosis','Spot quality issues in your data the moment you upload it.',<ActivityIcon key="a" />],['AI-guided normalization','Run rule-based and AI-guided transformations you can trust.',<Sparkles key="s" />],['Visual diffs','Verify every change side by side before you accept it.',<DiffIcon key="d" />],['Audit reports','Generate compliant reports documenting what changed and why.',<ClipboardCheck key="c" />]].map(([title,text,icon])=><article className="tx-card" key={String(title)}><div className="tx-ibox">{icon}</div><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+      <section id="how" className="tx-section" style={{ paddingTop: 0 }}><div className="tx-wrap"><p className="tx-eyebrow">How it works</p><h2 className="tx-h2">From messy upload to clean export in three steps</h2><div className="tx-steps">{[['Upload','Drop in your messy dataset, or start with the sample data to see it in action.'],['Review and apply','See the issues found, apply safe fixes, and compare results with visual diffs.'],['Export','Download your clean data, with an audit report of every change.']].map(([title,text],i)=><article className="tx-step" key={title}><div className="tx-number">{i+1}</div><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+      <section id="privacy" className="tx-section" style={{ paddingTop: 0 }}><div className="tx-wrap"><div className="tx-privacy"><div><p className="tx-eyebrow">Privacy first</p><h2 className="tx-h2">Your data never leaves your browser</h2><p>Everything runs locally, so sensitive spreadsheets stay on your machine, and any change can be rolled back.</p></div><ul className="tx-list"><li><ShieldCheck size={22} />100% in-browser and private</li><li><Zap size={22} />Instant, zero-lag engine</li><li><History size={22} />Reversible time-machine</li></ul></div></div></section>
+      <div className="tx-final"><div className="tx-wrap"><h2 className="tx-h2" style={{ margin: '0 auto' }}>Ready to clean your data?</h2><div className="tx-cta"><button className="tx-btn tx-primary" onClick={() => setCurrentView('upload')}>Upload Your Dataset</button><button className="tx-btn tx-ghost" onClick={loadSampleDataset}>Try With Sample Messy Data</button></div></div></div>
+    </main>
+    <footer className="tx-footer"><div className="tx-wrap tx-footer-in"><button className="tx-brand" onClick={() => scrollTo('top')}><Logo size={30} /><span>Tabulytix</span></button><span>Autonomous Data Engineering Studio</span></div></footer>
+  </div>;
 }
+
+function Preview({ type }: { type: 'before' | 'after' }) { const values = type === 'before' ? ['  priya SHARMA ','5/12/24','$1,200','rahul  verma','Dec 5 24','1200.0O','N/A','2024.12.05','  '] : ['Priya Sharma','2024-12-05','1200.00','Rahul Verma','2024-12-05','1200.00','Unknown','2024-12-05','0.00']; return <div><p className="tx-cap">{type === 'before' ? 'Before: messy' : 'After: analysis-ready'}</p><div className="tx-table">{['Name','Joined','Amount',...values].map((value,i)=><div className={i<3?'tx-th':type==='before'?'tx-bad':'tx-good'} key={`${value}-${i}`}>{value}</div>)}</div></div>; }
+function ActivityIcon() { return <svg className="tx-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4" /></svg>; }
+function DiffIcon() { return <svg className="tx-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3M12 2v20" /></svg>; }

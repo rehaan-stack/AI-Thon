@@ -107,7 +107,6 @@ function parseDelimited(
     delimiter,
     skipEmptyLines: false,
     dynamicTyping: false, // We handle type inference ourselves
-    transformHeader: (h: string) => h.trim(),
   });
 
   if (parsed.errors.length > 0) {
@@ -118,10 +117,16 @@ function parseDelimited(
     }
   }
 
-  let headers = parsed.meta.fields || [];
-  if (headers.length === 0) {
+  const rawHeaders = parsed.meta.fields || [];
+  if (rawHeaders.length === 0) {
     return { success: false, error: 'No columns detected in the file.', warnings };
   }
+
+  // Keep the raw header text for diagnostics while exposing a trimmed display name.
+  // The previous transformHeader callback discarded whitespace before the profiler
+  // could identify it as a structural issue.
+  const originalHeaders = [...rawHeaders];
+  let headers = rawHeaders.map((header) => header.trim());
 
   // Handle missing headers
   const hasEmptyHeaders = headers.some(h => !h || h.trim() === '');
@@ -131,9 +136,8 @@ function parseDelimited(
   }
 
   // Resolve duplicate headers
-  const originalHeaders = [...headers];
   headers = makeUniqueHeaders(headers);
-  const hasDuplicateHeaders = headers.some((h, i) => h !== originalHeaders[i]);
+  const hasDuplicateHeaders = headers.some((h, i) => h !== rawHeaders[i].trim());
   if (hasDuplicateHeaders) {
     warnings.push('Duplicate column names detected and resolved with numeric suffixes.');
   }
@@ -331,4 +335,14 @@ export async function parseFile(file: File, options?: ParseOptions): Promise<Par
 /** Parse the built-in sample dataset from a raw CSV string. */
 export function parseSampleCSV(csvContent: string, fileName: string): ParseResult {
   return parseDelimited(csvContent, fileName, new Blob([csvContent]).size, 'csv');
+}
+
+/** Parse raw delimited text for browser and server integrations. */
+export function parseDelimitedText(
+  content: string,
+  fileName: string,
+  format: 'csv' | 'tsv' = 'csv',
+  fileSize = new Blob([content]).size
+): ParseResult {
+  return parseDelimited(content, fileName, fileSize, format);
 }

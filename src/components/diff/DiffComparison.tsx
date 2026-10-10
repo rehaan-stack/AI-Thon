@@ -116,7 +116,7 @@ export function DiffComparison() {
   }, [workingDataset, onlyChanged, searchTerm, diffData.changedRowIds]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fadeIn">
+    <div className="diff-comparison max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fadeIn">
       {/* Metrics Comparison Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         {/* Health Score Evolution */}
@@ -190,7 +190,7 @@ export function DiffComparison() {
 
       {/* View Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2">
+          <div className="diff-toolbar-group flex items-center gap-2">
           <button
             onClick={() => setViewMode('side-by-side')}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
@@ -213,7 +213,7 @@ export function DiffComparison() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="diff-toolbar-options flex items-center gap-3">
           <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
             <input
               type="checkbox"
@@ -234,8 +234,8 @@ export function DiffComparison() {
               Cell-Level Audit Differences
             </h3>
           </div>
-          <div className="overflow-x-auto max-h-[600px]">
-            <table className="w-full text-left text-xs">
+          <div className="responsive-table-scroll overflow-x-auto max-h-[600px]">
+            <table className="responsive-table w-full text-left text-xs">
               <thead className="bg-slate-100 text-slate-600 border-b border-slate-200 sticky top-0 uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="py-2.5 px-3">Row #</th>
@@ -277,13 +277,13 @@ export function DiffComparison() {
         /* Side by Side View */
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Original View */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[550px]">
-            <div className="p-3 bg-slate-100 border-b border-slate-200 font-bold text-xs text-slate-700 flex items-center justify-between">
+          <div className="diff-table-panel bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[550px]">
+            <div className="diff-table-header p-3 bg-slate-100 border-b border-slate-200 font-bold text-xs text-slate-700 flex items-center justify-between gap-2">
               <span>Original Input ({originalDataset.rows.length} rows)</span>
               <span className="text-[11px] font-normal text-slate-500">Initial Import</span>
             </div>
             <div className="flex-1 overflow-auto">
-              <table className="w-full text-left text-xs">
+              <table className="responsive-table w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 sticky top-0 font-mono text-[11px]">
                   <tr>
                     <th className="py-2 px-2.5 w-10 text-center">#</th>
@@ -315,13 +315,13 @@ export function DiffComparison() {
           </div>
 
           {/* Cleaned Working View */}
-          <div className="bg-white rounded-2xl border border-emerald-300 shadow-sm overflow-hidden flex flex-col h-[550px]">
-            <div className="p-3 bg-emerald-50 border-b border-emerald-200 font-bold text-xs text-emerald-900 flex items-center justify-between">
+          <div className="diff-table-panel bg-white rounded-2xl border border-emerald-300 shadow-sm overflow-hidden flex flex-col h-[550px]">
+            <div className="diff-table-header p-3 bg-emerald-50 border-b border-emerald-200 font-bold text-xs text-emerald-900 flex items-center justify-between gap-2">
               <span>Cleaned Output ({workingDataset.rows.length} rows)</span>
               <span className="text-[11px] font-normal text-emerald-700">Analysis-Ready</span>
             </div>
             <div className="flex-1 overflow-auto">
-              <table className="w-full text-left text-xs">
+              <table className="responsive-table w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 sticky top-0 font-mono text-[11px]">
                   <tr>
                     <th className="py-2 px-2.5 w-10 text-center">#</th>

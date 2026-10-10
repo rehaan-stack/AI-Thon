@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '@/store';
+import { exportXLSX } from '@/lib/export';
 import {
   Wand2,
   Trash2,
@@ -20,6 +21,8 @@ import {
   Percent,
   Check,
   ChevronDown,
+  Lightbulb,
+  Download,
 } from 'lucide-react';
 import type { CleaningActionId, CleaningConfig, HeaderStyle, MissingFillStrategy } from '@/types';
 import { isDestructive } from '@/lib/cleaning';
@@ -83,6 +86,44 @@ const CLEANING_ACTIONS: ActionDefinition[] = [
     name: 'Drop Rows With Null Values',
     category: 'missing',
     description: 'Removes rows that contain null or missing values in target columns.',
+  },
+
+  // Categories, schema & diagnostics
+  {
+    id: 'harmonize_categories',
+    name: 'Harmonize Category Values',
+    category: 'schema',
+    description: 'Maps inconsistent labels such as USA, U.S.A., and United States to one value.',
+  },
+  {
+    id: 'detect_outliers',
+    name: 'Detect Numeric Outliers',
+    category: 'schema',
+    description: 'Flags values outside the IQR range without changing the dataset.',
+  },
+  {
+    id: 'rename_column',
+    name: 'Rename Column',
+    category: 'schema',
+    description: 'Changes one column name while preserving all of its data.',
+  },
+  {
+    id: 'delete_column',
+    name: 'Delete Column',
+    category: 'schema',
+    description: 'Removes an unwanted column and captures the change for undo.',
+  },
+  {
+    id: 'duplicate_column',
+    name: 'Duplicate Column',
+    category: 'schema',
+    description: 'Creates a copy of the selected column for derived calculations.',
+  },
+  {
+    id: 'reorder_columns',
+    name: 'Reorder Columns',
+    category: 'schema',
+    description: 'Rearranges the column order in the working dataset.',
   },
 
   // Formatting & Text
@@ -159,6 +200,7 @@ const CATEGORIES = [
   { id: 'missing', label: 'Missing Values' },
   { id: 'formatting', label: 'Formatting' },
   { id: 'types', label: 'Types & Coercion' },
+  { id: 'schema', label: 'Schema & Diagnostics' },
 ];
 
 export function CleaningStudio() {
@@ -178,13 +220,25 @@ export function CleaningStudio() {
   const [customFillValue, setCustomFillValue] = useState<string>('Unknown');
   const [keepOccurrence, setKeepOccurrence] = useState<'first' | 'last'>('first');
   const [percentageMode, setPercentageMode] = useState<'decimal' | 'numeric'>('numeric');
+  const [newColumnName, setNewColumnName] = useState('');
+  const [categoryMappingsText, setCategoryMappingsText] = useState('');
+  const [columnOrder, setColumnOrder] = useState<string[]>([]);
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [lastNotice, setLastNotice] = useState<string | null>(null);
+  const actionListRef = useRef<HTMLDivElement>(null);
+
+  // Start each filtered result at its first operation. This prevents a list
+  // that was scrolled to the bottom in one category from appearing empty when
+  // the user switches to a shorter category.
+  useEffect(() => {
+    actionListRef.current?.scrollTo({ top: 0 });
+  }, [activeCategory]);
 
   if (!workingDataset) {
     return (
       <EmptyState
         title="Interactive Cleaning Workspace"
-        description="Run 18+ high-precision cleaning and normalization operations with instant before/after previews, column selectors, and multi-level Undo/Redo."
+        description="Run 23 high-precision cleaning, schema, and diagnostic operations with instant before/after previews, column selectors, and multi-level Undo/Redo."
         featureBadge="Cleaning Studio"
         features={[
           'Whitespace trimming & invisible control character removal',
@@ -197,9 +251,16 @@ export function CleaningStudio() {
   }
 
   const { columns } = workingDataset;
+  const defaultColumnOrder = columns.map((column) => column.id);
+  const resolvedColumnOrder =
+    columnOrder.length === columns.length && columnOrder.every((id) => columns.some((column) => column.id === id))
+      ? columnOrder
+      : defaultColumnOrder;
 
   const currentActionDef =
     CLEANING_ACTIONS.find((a) => a.id === selectedActionId) || CLEANING_ACTIONS[0];
+
+  const healthRecommendations = aiAnalysis?.recommendedPipeline.slice(0, 3) ?? [];
 
   const filteredActions =
     activeCategory === 'all'
@@ -223,9 +284,24 @@ export function CleaningStudio() {
   };
 
   const handleApply = () => {
+    const categoryMappings = categoryMappingsText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .reduce<Record<string, string>>((mappings, line) => {
+        const separator = line.indexOf('=');
+        if (separator > 0) {
+          const from = line.slice(0, separator).trim();
+          const to = line.slice(separator + 1).trim();
+          if (from && to) mappings[from] = to;
+        }
+        return mappings;
+      }, {});
+
     const config: CleaningConfig = {
       actionId: selectedActionId,
       targetColumns: targetColumns.length > 0 ? targetColumns : undefined,
+      targetRows: selectedRowIds.length > 0 ? selectedRowIds : undefined,
       headerStyle: selectedActionId === 'normalize_headers' ? headerStyle : undefined,
       fillStrategy: selectedActionId === 'fill_missing' ? fillStrategy : undefined,
       customFillValue:
@@ -236,6 +312,10 @@ export function CleaningStudio() {
         selectedActionId === 'deduplicate_by_keys' ? keepOccurrence : undefined,
       percentageMode:
         selectedActionId === 'normalize_percentages' ? percentageMode : undefined,
+      newName: selectedActionId === 'rename_column' ? newColumnName.trim() : undefined,
+      categoryMappings:
+        selectedActionId === 'harmonize_categories' ? categoryMappings : undefined,
+      newOrder: selectedActionId === 'reorder_columns' ? resolvedColumnOrder : undefined,
     };
 
     const res = applyOperation(config);
@@ -260,6 +340,7 @@ export function CleaningStudio() {
       const res = applyOperation({
         actionId: rec.actionId,
         ...rec.config,
+        targetRows: selectedRowIds.length > 0 ? selectedRowIds : undefined,
       });
       if (res.success) appliedCount++;
     }
@@ -268,11 +349,16 @@ export function CleaningStudio() {
     setTimeout(() => setLastNotice(null), 5000);
   };
 
+  const handleDownloadCleanedExcel = () => {
+    if (!workingDataset) return;
+    exportXLSX(workingDataset);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fadeIn">
+    <div className="cleaning-workspace max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-fadeIn">
       {/* Top Action Bar with Undo/Redo & Auto-Clean */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2">
+      <div className="cleaning-action-bar flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="cleaning-action-group flex items-center gap-2">
           <button
             onClick={undo}
             disabled={!canUndo}
@@ -295,6 +381,15 @@ export function CleaningStudio() {
 
           <span className="h-5 w-px bg-slate-200 mx-2" />
 
+          <button
+            onClick={handleDownloadCleanedExcel}
+            className="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
+            title="Download the current cleaned working dataset as an Excel file"
+          >
+            <Download size={14} />
+            <span>Download cleaned Excel</span>
+          </button>
+
           {lastNotice && (
             <div className="text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 animate-fadeIn">
               {lastNotice}
@@ -305,7 +400,7 @@ export function CleaningStudio() {
         {aiAnalysis && aiAnalysis.recommendedPipeline.length > 0 && (
           <button
             onClick={handleRunAiPipeline}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold flex items-center gap-2 shadow-sm transition-all"
+            className="cleaning-ai-button px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold flex items-center gap-2 shadow-sm transition-all"
           >
             <Sparkles size={14} />
             <span>Execute AI Recommended Pipeline ({aiAnalysis.recommendedPipeline.length} steps)</span>
@@ -314,10 +409,10 @@ export function CleaningStudio() {
       </div>
 
       {/* Main Studio Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="cleaning-main-grid grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Operations Catalog (Left Column) */}
-        <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="transformation-library-panel lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div className="transformation-library-header flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
               Transformation Library
             </h3>
@@ -325,7 +420,7 @@ export function CleaningStudio() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex flex-wrap gap-1 text-xs">
+          <div className="transformation-library-filters flex flex-wrap gap-1 text-xs">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
@@ -342,10 +437,13 @@ export function CleaningStudio() {
           </div>
 
           {/* Action List */}
-          <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+          <div ref={actionListRef} className="transformation-library-list space-y-2 pr-1">
             {filteredActions.map((action) => {
               const isSelected = selectedActionId === action.id;
               const destructive = isDestructive(action.id);
+              const recommendation = aiAnalysis?.recommendedPipeline.find(
+                (item) => item.actionId === action.id
+              );
 
               return (
                 <div
@@ -354,22 +452,35 @@ export function CleaningStudio() {
                   className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
                     isSelected
                       ? 'border-emerald-500 bg-emerald-50/50 shadow-sm'
+                      : recommendation
+                      ? 'border-emerald-200 bg-emerald-50/20 hover:border-emerald-400 hover:bg-emerald-50/40'
                       : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900">
-                      {action.name}
-                    </span>
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">{action.name}</span>
+                      {recommendation && (
+                        <span className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-100 px-1.5 py-0.5 text-xs font-semibold text-emerald-700">
+                          <Sparkles size={10} /> Recommended
+                        </span>
+                      )}
+                    </div>
                     {destructive && (
-                      <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                      <span className="ml-2 shrink-0 rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-xs font-semibold text-rose-600">
                         Destructive
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                  <p className="text-sm text-slate-500 mt-1 leading-relaxed">
                     {action.description}
                   </p>
+                  {recommendation && (
+                    <p className="mt-2 truncate text-xs font-semibold text-emerald-700" title={recommendation.reason}>
+                      Health opportunity: {recommendation.target}
+                      {recommendation.estimatedImpact ? ` · ${recommendation.estimatedImpact}` : ''}
+                    </p>
+                  )}
                 </div>
               );
             })}
@@ -391,7 +502,8 @@ export function CleaningStudio() {
             {/* Target Columns Selection */}
             {selectedActionId !== 'normalize_headers' &&
               selectedActionId !== 'deduplicate_rows' &&
-              selectedActionId !== 'drop_empty_rows' && (
+              selectedActionId !== 'drop_empty_rows' &&
+              selectedActionId !== 'reorder_columns' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
@@ -537,11 +649,156 @@ export function CleaningStudio() {
                 </div>
               </div>
             )}
+
+            {/* Category Mapping Options */}
+            {selectedActionId === 'harmonize_categories' && (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Category Mappings
+                </label>
+                <textarea
+                  value={categoryMappingsText}
+                  onChange={(event) => setCategoryMappingsText(event.target.value)}
+                  placeholder={'One mapping per line, for example:\nUSA = United States\nU.S.A. = United States'}
+                  rows={5}
+                  className="w-full resize-y px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+                <p className="text-[11px] text-slate-400">
+                  Use <span className="font-mono">source = canonical value</span> on each line.
+                </p>
+              </div>
+            )}
+
+            {/* Column Rename Options */}
+            {selectedActionId === 'rename_column' && (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  New Column Name
+                </label>
+                <input
+                  type="text"
+                  value={newColumnName}
+                  onChange={(event) => setNewColumnName(event.target.value)}
+                  placeholder="Enter a new name for the selected column"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+            )}
+
+            {/* Column Ordering Options */}
+            {selectedActionId === 'reorder_columns' && (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Column Order
+                </label>
+                <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  {resolvedColumnOrder.map(
+                    (columnId, index, order) => {
+                      const column = columns.find((item) => item.id === columnId);
+                      if (!column) return null;
+                      return (
+                        <div key={columnId} className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 text-xs">
+                          <span className="truncate font-mono text-slate-700">{column.name}</span>
+                          <span className="flex shrink-0 gap-1">
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => {
+                                const next = [...order];
+                                [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                                setColumnOrder(next);
+                              }}
+                              className="rounded border border-slate-200 px-1.5 py-0.5 text-slate-500 disabled:opacity-30"
+                              aria-label={`Move ${column.name} up`}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === order.length - 1}
+                              onClick={() => {
+                                const next = [...order];
+                                [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                                setColumnOrder(next);
+                              }}
+                              className="rounded border border-slate-200 px-1.5 py-0.5 text-slate-500 disabled:opacity-30"
+                              aria-label={`Move ${column.name} down`}
+                            >
+                              ↓
+                            </button>
+                          </span>
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Health Improvement Suggestions */}
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm">
+                  <Lightbulb size={17} />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-sm font-bold text-slate-900">Health improvement suggestions</h4>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
+                    {healthRecommendations.length > 0
+                      ? 'These are the highest-impact changes detected for this dataset.'
+                      : 'No high-impact fixes are currently detected. Your dataset is in good shape.'}
+                  </p>
+                </div>
+              </div>
+
+              {healthRecommendations.length > 0 && (
+                <div className="space-y-2">
+                  {healthRecommendations.map((recommendation) => (
+                    <div
+                      key={`${recommendation.step}-${recommendation.actionId}-${recommendation.target}`}
+                      className="rounded-xl border border-emerald-100 bg-white p-3 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">
+                              {recommendation.step}
+                            </span>
+                            <span className="text-xs font-bold text-slate-900">{recommendation.title}</span>
+                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold capitalize ${
+                              recommendation.severity === 'high'
+                                ? 'bg-rose-100 text-rose-700'
+                                : recommendation.severity === 'medium'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {recommendation.severity} priority
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[11px] leading-relaxed text-slate-600">{recommendation.reason}</p>
+                          {recommendation.estimatedImpact && (
+                            <p className="mt-1 text-[11px] font-semibold text-emerald-700">
+                              Expected impact: {recommendation.estimatedImpact}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <p className="mt-2 truncate font-mono text-[10px] text-slate-400" title={recommendation.target}>
+                        Target: {recommendation.target}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Action Trigger Button */}
           <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
             <span className="text-xs text-slate-500">
+              {selectedRowIds.length > 0
+                ? `${selectedRowIds.length} selected row${selectedRowIds.length === 1 ? '' : 's'} · `
+                : ''}
               Safe & non-destructive: snapshot captured for 1-click undo.
             </span>
 
@@ -561,7 +818,12 @@ export function CleaningStudio() {
         <h3 className="text-base font-bold text-slate-900">
           Live Working Dataset Preview
         </h3>
-        <DataGrid />
+        <DataGrid
+          selectedColumnIds={targetColumns}
+          onSelectedColumnIdsChange={setTargetColumns}
+          selectedRowIds={selectedRowIds}
+          onSelectedRowIdsChange={setSelectedRowIds}
+        />
       </div>
     </div>
   );

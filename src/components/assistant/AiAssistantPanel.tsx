@@ -77,6 +77,9 @@ export function AiAssistantPanel() {
       } else if (lower.includes('date') || lower.includes('iso')) {
         matchedAction = 'normalize_dates';
         reply = 'Harmonizing dates to standard ISO-8601 (YYYY-MM-DD).';
+      } else if (lower.includes('email') || lower.includes('e-mail')) {
+        matchedAction = 'normalize_emails';
+        reply = 'Cleaning email addresses by trimming whitespace, normalizing casing, and correcting basic syntax issues.';
       } else if (lower.includes('currency') || lower.includes('dollar') || lower.includes('price')) {
         matchedAction = 'remove_currency_symbols';
         reply = 'Stripping currency signs and parsing numeric values.';
@@ -102,37 +105,37 @@ export function AiAssistantPanel() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 animate-fadeIn">
+    <div className="ai-assistant-panel max-w-4xl mx-auto px-4 py-6 space-y-6 animate-fadeIn">
       {/* AI Summary Banner */}
-      <div className="bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-950 text-white p-6 rounded-3xl border border-emerald-900/50 shadow-xl space-y-4">
+      <div className="bg-white text-slate-900 p-6 rounded-3xl border border-emerald-200 shadow-xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
               <Bot size={22} />
             </div>
             <div>
               <h2 className="text-base font-bold tracking-tight">AI Data Doctor & Copilot</h2>
-              <span className="text-xs text-emerald-400 font-mono">Autonomous In-Browser Diagnosis</span>
+              <span className="text-xs text-emerald-700 font-mono">Autonomous In-Browser Diagnosis</span>
             </div>
           </div>
 
-          <div className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/40">
+          <div className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
             Health: {aiAnalysis.healthScore}/100
           </div>
         </div>
 
-        <p className="text-sm text-slate-300 leading-relaxed font-normal">
+        <p className="text-sm text-slate-600 leading-relaxed font-normal">
           {aiAnalysis.summary}
         </p>
 
         {aiAnalysis.recommendedPipeline.length > 0 && (
           <div className="pt-2 flex items-center justify-between">
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-500">
               {aiAnalysis.recommendedPipeline.length} recommended remediation operations
             </span>
             <button
               onClick={handleRunFullPipeline}
-              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center gap-2 shadow transition-all"
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow transition-all"
             >
               <Sparkles size={14} />
               <span>Auto-Clean Full Pipeline</span>
@@ -212,7 +215,7 @@ export function AiAssistantPanel() {
         )}
 
         {/* Input Field */}
-        <form onSubmit={handleSendPrompt} className="flex gap-2">
+        <form onSubmit={handleSendPrompt} className="ai-prompt-form flex gap-2">
           <input
             type="text"
             value={prompt}

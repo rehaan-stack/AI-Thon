@@ -27,6 +27,7 @@ export function ExportView() {
   const initialQualityScore = useAppStore((s) => s.initialQualityScore);
   const history = useAppStore((s) => s.history);
   const clearDataset = useAppStore((s) => s.clearDataset);
+  const setCurrentView = useAppStore((s) => s.setCurrentView);
   const theme = useAppStore((s) => s.theme);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
 
@@ -39,9 +40,14 @@ export function ExportView() {
   const [sheetName, setSheetName] = useState('Cleaned Data');
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
 
+  const handleClearDataset = () => {
+    clearDataset();
+    setCurrentView('home');
+  };
+
   if (!workingDataset) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 animate-fadeIn">
+      <div className="export-view max-w-4xl mx-auto px-4 py-6 space-y-6 animate-fadeIn">
         <EmptyState
           title="Dataset Export & Pipeline Delivery"
           description="Download your cleansed and normalized data as high-fidelity CSV, multi-sheet Excel (.xlsx), or generate an executive PDF Quality Audit Report."
@@ -142,7 +148,7 @@ export function ExportView() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 animate-fadeIn">
+    <div className="export-view max-w-4xl mx-auto px-4 py-8 space-y-8 animate-fadeIn">
       {/* Header */}
       <div className="space-y-1">
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
@@ -292,13 +298,13 @@ export function ExportView() {
           </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+        <div className="export-dataset-actions pt-4 border-t border-slate-100 flex items-center justify-between">
           <span className="text-xs text-slate-500">
             Current Dataset: {workingDataset.meta.fileName} ({workingDataset.rows.length} rows)
           </span>
 
           <button
-            onClick={clearDataset}
+            onClick={handleClearDataset}
             className="px-4 py-2 rounded-xl text-rose-600 hover:bg-rose-50 border border-rose-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
           >
             <Trash2 size={14} />

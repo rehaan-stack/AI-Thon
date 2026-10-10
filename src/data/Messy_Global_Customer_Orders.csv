@@ -1,0 +1,41 @@
+Cust ID,Customer_Name,Email Address,PHONE#,Order Date,Product  Category,Quantity,REVENUE ($),Country/Region,Status,Notes
+1001, John Smith ,john.smith@email.com,(555) 123-4567,2024-01-15,Electronics,2,"$1,250.00",United States,Completed,Express shipping
+1002,Jane Doe,JANE.DOE@EMAIL.COM,555-234-5678,01/20/2024,Electronics,1,"$899.99",USA,Completed,
+1003,Bob Johnson,bob.johnson@email.com,,2024-02-03,Home & Garden,3,"$150.75",United States,Pending,Gift wrap requested
+1004, Alice Williams,alice.w@email.com,(555) 345-6789,03/15/2024, Clothing,2,$75.50,usa,Completed,
+1005,Charlie Brown,CHARLIE.BROWN@EMAIL.COM,555.456.7890,2024-01-15,Electronics,1,"$2,100.00",U.S.A.,Shipped,Fragile items
+1006,Diana Prince,diana.prince@email.com,,15-04-2024,Home & Garden,1,$45.00,United Kingdom,Completed,N/A
+1007,Edward Norton, edward.norton@email.COM,(555) 567-8901,2024/05/20,Clothing,4,"$320.00",Canada,Pending,
+1008,Fiona Apple,fiona.apple@email.com,555-678-9012,06/25/2024,Electronics,1,$NaN,US,Completed,Warranty included
+1009,George Lucas,george.lucas@email.com,,2024-07-10,Home & Garden,2,"$89.99",United States,Shipped,
+1010,Hannah Montana,HANNAH.M@EMAIL.COM,(555) 789-0123,08/15/2024, Clothing ,3,"$210.00",usa,Completed,Birthday gift
+1011, Ivan Petrov ,ivan.petrov@email.com,N/A,2024-09-01,Electronics,1,"$1,500.00",Russia,Pending,Express delivery
+1012,Julia Roberts,julia.roberts@email.com,555-890-1234,10-03-2024,Food & Beverages,5,$75.00,United States,Completed,
+1013,Kevin Hart,kevin.hart@email.com,(555) 901-2345,2024-11-12,Electronics,2,"$3,200.00",USA,Shipped,Insurance required
+1014,Luna Lovegood,luna.l@email.com,,12/20/2024,Home & Garden,1,"$35.50",United Kingdom,Completed,none
+1015,Michael Scott,MICHAEL.SCOTT@EMAIL.COM,555-012-3456,2024-01-25,Clothing,3,$180.00,US,Pending,
+1016,Nancy Drew,nancy.drew@email.com,(555) 123-4567,02/28/2024,Food & Beverages,2,"$45.99",United States,Completed,
+1017,Oscar Wild,oscar.wild@email.com,,2024-03-17,Electronics,1,"$650.00",Ireland,Shipped,N/A
+1018,Patricia Arquette,patricia.a@email.com,555-234-5678,04/22/2024, Clothing,2,$95.00,Canada,Completed,
+1019,Quinn Hughes,quinn.hughes@email.com,(555) 345-6789,2024-05-30,Home & Garden,4,"$200.00",Canada,Pending,
+1020,Rachel Green, rachel.green@email.COM,,06/15/2024,Food & Beverages,1,$12.99,U.S.A.,Completed,
+1021, Robert Downey ,ROBERT.DOWNEY@email.com,555.456.7890,2024-07-04,Electronics,1,"$4,500.00",United States,Completed,VIP customer
+1022,Sarah Connor,sarah.connor@email.com,(555) 567-8901,08/19/2024,Clothing,2,$160.00,usa,Shipped,
+1023,Tom Hanks,tom.hanks@email.com,,2024-09-22,Home & Garden,3,$275.00,US,Completed,Bulk order
+1024,Uma Thurman,uma.thurman@email.com,555-678-9012,10/10/2024,Electronics,1,"$1,800.00",United States,Pending,
+1025,Victor Hugo,victor.hugo@email.com,,2024-11-05,Food & Beverages,2,$55.00,France,Completed,null
+1001, John Smith ,john.smith@email.com,(555) 123-4567,2024-01-15,Electronics,2,"$1,250.00",United States,Completed,Express shipping
+1026,Wendy Darling,wendy.darling@email.com,(555) 789-0123,12/01/2024,Clothing,1,$42.50,United Kingdom,Shipped,
+1027,Xavier Charles,XAVIER.C@EMAIL.COM,N/A,2024-02-14,Electronics,2,"$950.00",USA,Completed,
+1028,Yara Shahidi,yara.shahidi@email.com,555-890-1234,03/28/2024,Home & Garden,1,-,usa,Pending,
+1029,Zach Efron,zach.efron@email.com,(555) 901-2345,2024-04-16,Food & Beverages,3,$67.50,US,Completed,
+1030,Amy Wong,AMY.WONG@EMAIL.COM,,05/20/2024, Clothing ,2,$125.00,U.S.A.,Completed,
+1031,Bruce Wayne,bruce.wayne@email.com,555-012-3456,2024-06-30,Electronics,1,"$7,500.00",United States,Shipped,Corporate account
+1032,Clara Oswald,clara.oswald@email.com,(555) 123-4567,07/14/2024,Home & Garden,2,"$165.00",United Kingdom,Completed,undefined
+1033,Derek Jeter,derek.jeter@email.com,,2024-08-25,Food & Beverages,1,$28.75,USA,Pending,
+1034,Emma Stone,emma.stone@email.com,555-234-5678,09/30/2024,Clothing,4,"$440.00",US,Completed,
+1035,Frank Castle,frank.castle@email.com,(555) 345-6789,2024-10-18,Electronics,1,"$2,250.00",United States,Shipped,
+1013,Kevin Hart,kevin.hart@email.com,(555) 901-2345,2024-11-12,Electronics,2,"$3,200.00",USA,Shipped,Insurance required
+1036,Grace Hopper, grace.hopper@EMAIL.com,,11/22/2024,Electronics,3,"$1,100.00",usa,Completed,Academic discount
+1037,Henry Jones,henry.jones@email.com,555.456.7890,2024-12-10,Home & Garden,1,$85.00,United States,Pending,
+1038, Isabella Rossellini,isabella.r@email.com,(555) 567-8901,01/05/2024,Clothing,2,$190.00,Italy,Completed,

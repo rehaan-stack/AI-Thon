@@ -5,10 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "tsx server/index.ts",
-    "server:dev": "tsx watch server/index.ts",
     "build": "tsc && vite build",
-    "build:server": "tsc -p tsconfig.server.json --noEmit",
     "preview": "vite preview",
     "test": "vitest run"
   },
@@ -34,7 +31,6 @@
     "@types/papaparse": "^5.5.2",
     "@vitejs/plugin-react": "^6.1.2",
     "jsdom": "^30.1.2",
-    "tsx": "^4.23.15",
     "vitest": "^5.0.3"
   }
 }

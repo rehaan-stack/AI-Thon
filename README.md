@@ -1,7 +1,8 @@
 # 🧼 Tabulytix — Intelligent Data Cleaning & Normalization Studio
 
 > **"Messy Data In. Meaningful Insights Out."**  
-> A high-performance, 100% client-side data quality and normalization platform built for data scientists, analysts, and developers. Profile, clean, reconcile, and export tabular data with zero backend dependencies and complete privacy.
+> A high-performance, 100% client-side data quality and normalization platform built for data scientists, analysts, and developers. Profile, clean, reconcile, and export tabular data with zero back-end dependence.  
+> 🌐 Live Demo: [Tabulytix on Render](https://tabulytix-is7w.onrender.com/)
 
 [![React](https://img.shields.io/badge/React-19.3-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -19,7 +20,7 @@ Data professionals spend upwards of **80% of their time cleaning and formatting 
 2. **Depend on complex, error-prone manual Excel manipulations** (lack auditability, non-reproducible), or
 3. **Require writing custom Python/Pandas scripts** for routine quality fixes.
 
-**Tabulytix** bridges this gap by delivering a **zero-server, browser-native data wrangling studio**. It combines automated statistical diagnostics, declarative cleaning recipes, cell-level visual diffing, an interactive AI assistant, and audit report generation — all running in-memory on the client machine.
+**Tabulytix** bridges this gap by delivering a **zero-server, browser-native data wrangling studio**. It combines automated statistical diagnostics, declarative cleaning recipes, cell-level visual diffing, and export-grade auditing in a single streamlined experience.
 
 ---
 
@@ -64,12 +65,12 @@ Follow these steps to evaluate the end-to-end functionality of Tabulytix:
 
 | Step | Action | What to Observe |
 |---|---|---|
-| **1. Load Sample Data** | Click **"Load Sample Dataset"** on the landing/upload view. | Instantly loads a messy customer CRM dataset containing intentional missing values, mixed date formats (`DD/MM/YYYY`, `YYYY-MM-DD`), duplicate rows, casing anomalies, and whitespace issues. |
-| **2. Review Diagnostics** | Inspect the **Data Health Score** and column diagnostic cards. | Real-time calculation of overall quality (Completeness, Uniqueness, Consistency, Structural Hygiene) and identified issues. |
-| **3. Run Smart Clean** | Click **"Auto-Clean Recommended"** or choose individual operations (Deduplicate, Trim Whitespace, Standardize Dates, Impute Missing). | Clean transformations execute in milliseconds in memory with non-destructive step history. |
+| **1. Load Sample Data** | Click **"Load Sample Dataset"** on the landing/upload view. | Instantly loads a messy customer CRM dataset containing intentional missing values, mixed date formats (`DD/MM/YYYY` vs `MM/DD/YYYY`), duplicates, and casing inconsistencies. |
+| **2. Review Diagnostics** | Inspect the **Data Health Score** and column diagnostic cards. | Real-time calculation of overall quality (Completeness, Uniqueness, Consistency, Structural Hygiene) with actionable highlights. |
+| **3. Run Smart Clean** | Click **"Auto-Clean Recommended"** or choose individual operations (Deduplicate, Trim Whitespace, Standardize Dates, Impute Missing). | Clean transformations execute in sequence with immediate preview and traceability. |
 | **4. Visual Diff Mode** | Switch to the **Diff View** tab. | Side-by-side or cell-level diff highlighting exactly what changed: green for normalized, amber for imputed, red for removed. |
-| **5. AI Data Assistant** | Open the **AI Assistant** panel in the bottom right. | Ask questions like *"What columns have missing values?"* or *"How should I clean the date column?"* to see schema-aware intelligent guidance. |
-| **6. Export & Audit Report**| Click **Export** in the top bar. | Export clean CSV, Excel (`.xlsx`), JSON, or download a formal **PDF Audit Summary** documenting every transformation applied for governance. |
+| **5. AI Data Assistant** | Open the **AI Assistant** panel in the bottom right. | Ask questions like *"What columns have missing values?"* or *"How should I clean the date column?"* to see schema-aware suggestions. |
+| **6. Export & Audit Report**| Click **Export** in the top bar. | Export clean CSV, Excel (`.xlsx`), JSON, or download a formal **PDF Audit Summary** documenting every transformation applied for compliance review. |
 | **7. Night Mode** | Toggle the **Dark/Light Theme** switch in the top header. | Flawless dark mode styling with accessible contrast ratios for night-time wrangling. |
 
 ---
@@ -179,7 +180,7 @@ project/
 │   ├── components/          # Reusable UI component modules
 │   │   ├── assistant/       # AI Assistant chat & suggestion popups
 │   │   ├── auth/            # Optional authentication & user profile widgets
-│   │   ├── cleaning/        # Cleaning action modals, recipe panels
+│   ���   ├── cleaning/        # Cleaning action modals, recipe panels
 │   │   ├── common/          # Buttons, modal dialogs, badges, tooltips
 │   │   ├── diagnostics/     # Health score dials, column metric cards
 │   │   ├── diff/            # Side-by-side & unified diff viewer
